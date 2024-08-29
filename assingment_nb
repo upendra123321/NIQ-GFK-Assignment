@@ -13,11 +13,11 @@ movies_raw_df = spark.read.csv("/FileStore/tables/movies.dat", header=True, sche
 %md
 ######1.1 Clean out Movies df
 
-from pyspark.sql import functions as F
+from pyspark.sql import regexp_extract, explode, split, col
 # Extract year from the title and explode the genres
 movies_df = (movies_raw_df
-             .withColumn("Year", F.regexp_extract(F.col("Title"), r'\((\d{4})\)', 1).cast(IntegerType()))
-             .withColumn("Genre", F.explode(F.split(F.col("Genres"), r'\|'))))
+             .withColumn("Year", regexp_extract(col("Title"), r'\((\d{4})\)', 1).cast(IntegerType()))
+             .withColumn("Genre", explode(F.split(col("Genres"), r'\|'))))
 
 movies_raw_df.unpersist()             
 
@@ -41,11 +41,11 @@ users_raw_df = spark.read.csv("/FileStore/tables/users.dat", header=True, schema
 %md
 ###### 2.1 Clean Users DF
 
-from pyspark.sql import functions as F
+from pyspark.sql import col
 # Filter users by non-null zip code and age range 18-59
 users_df = (users_raw_df
-            .filter(F.col("Zip-Code").isNotNull())
-            .filter(F.col("Age").between(18, 59))
+            .filter(col("Zip-Code").isNotNull())
+            .filter(col("Age").between(18, 59))
             .select("UserID", "Age"))
 
 
@@ -71,13 +71,13 @@ ratings_df = spark.read.csv("/FileStore/tables/ratings.dat", header=True, schema
 %md
 ## Aggregate all 3 DFs
 
-from pyspark.sql import functions as F 
+from pyspark.sql import col, avg, 
 # Join ratings with movies, filter movies released after 1989, group by genre and year, and calculate average rating
 average_ratings_df = (ratings_df
                       .join(movies_df, on="MovieID")
-                      .filter(F.col("Year") > 1989)
+                      .filter(col("Year") > 1989)
                       .groupBy("Genre", "Year")
-                      .agg(F.avg("Rating").alias("avg_rating"))
+                      .agg(avg("Rating").alias("avg_rating"))
                       .orderBy("Year"))
 
 ratings_df.unpersist()
